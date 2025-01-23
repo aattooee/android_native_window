@@ -1,7 +1,7 @@
+use reqwest::blocking::get;
 use std::env;
 use std::fs;
 use std::path::Path;
-use reqwest::blocking::get;
 
 fn main() {
     // 设置目标文件名和下载地址
