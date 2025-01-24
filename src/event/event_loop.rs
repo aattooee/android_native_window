@@ -35,8 +35,6 @@ impl EventLoop {
         };
 
         let device = device.unwrap_or_else(|| panic!("can not find touch in your device"));
-        // 打印设备名称
-        println!("found touch: {}", device.name().unwrap_or("Unknown"));
 
         //每秒轮询一次屏幕的朝向
         let realtime_orientation = std::sync::Arc::new(std::sync::Mutex::new(1 as u8));
