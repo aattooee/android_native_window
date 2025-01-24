@@ -17,11 +17,10 @@ impl FingerState {
 pub type MousePos = FingerState;
 pub struct EventLoop {
     mouse_pos: std::sync::Arc<std::sync::Mutex<MousePos>>,
-    fps: f32,
 }
 
 impl EventLoop {
-    pub fn new(fps: f32) -> Self {
+    pub fn new() -> Self {
         let mut i = 0;
         let device: Option<Device> = loop {
             if let Ok(dev) = Device::open(format!("/dev/input/event{i}")) {
@@ -57,7 +56,7 @@ impl EventLoop {
             Self::refresh_mouse_pos(realtime_orientation, mouse_pos_clone, device);
         });
 
-        Self { mouse_pos, fps }
+        Self { mouse_pos }
     }
     fn refresh_mouse_pos(
         realtime_orientation: std::sync::Arc<std::sync::Mutex<u8>>,
@@ -166,31 +165,29 @@ impl EventLoop {
         F: FnMut(Event, std::time::Duration, &mut bool),
     {
         let mut run = true;
+        let mut last_frame = std::time::Instant::now();
+        let mut mouse_cache = MousePos::new();
         loop {
             let now = std::time::Instant::now();
-            let mut last_frame = std::time::Instant::now();
+
             let delta_time = now - last_frame;
             last_frame = now;
             if let Ok(pos) = self.mouse_pos.try_lock() {
-                if (*pos).is_down {
-                    event_handler(
-                        Event::MouseDown((*pos).pos.0, (*pos).pos.1),
-                        delta_time,
-                        &mut run,
-                    );
-                } else {
-                    event_handler(Event::MouseUp, delta_time, &mut run);
-                }
+                mouse_cache.pos = (*pos).pos;
+                mouse_cache.is_down = (*pos).is_down;
+            }
+            if mouse_cache.is_down {
+                event_handler(
+                    Event::MouseMoving(mouse_cache.pos.0, mouse_cache.pos.1),
+                    delta_time,
+                    &mut run,
+                );
             } else {
                 event_handler(Event::MouseUp, delta_time, &mut run);
             }
+
             if !run {
                 break;
-            }
-            let sleep_time =
-                1.0 / self.fps - (std::time::Instant::now() - last_frame).as_secs_f32();
-            if sleep_time > 0.0 {
-                std::thread::sleep(std::time::Duration::from_secs_f32(sleep_time));
             }
         }
     }

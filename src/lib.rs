@@ -37,7 +37,7 @@ impl Window {
     }
     pub fn handle_event(io: &mut imgui::Io, event: Event, delta_time: std::time::Duration) {
         match event {
-            Event::MouseDown(x, y) => {
+            Event::MouseMoving(x, y) => {
                 io.add_mouse_pos_event([x, y]);
                 io.add_mouse_button_event(imgui::MouseButton::Left, true);
             }
@@ -48,10 +48,14 @@ impl Window {
         io.update_delta_time(delta_time);
     }
     pub fn get_width(&self) -> u32 {
-        return self.width;
+        return if self.width > self.height {
+            self.width
+        } else {
+            self.height
+        };
     }
     pub fn get_height(&self) -> u32 {
-        return self.height;
+        return self.get_width();
     }
     pub fn display_handle(&self) -> RawDisplayHandle {
         return self.display_handle;
@@ -59,4 +63,9 @@ impl Window {
     pub fn window_handle(&self) -> RawWindowHandle {
         return self.window_handle;
     }
+}
+pub fn attach_window(io: &mut imgui::Io, window: &Window) {
+    //font scale
+    //window size
+    io.display_size = [window.get_width() as f32, window.get_height() as f32]
 }
