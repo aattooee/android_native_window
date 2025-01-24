@@ -1,5 +1,7 @@
  
-mkdir build 2>/dev/null  || (echo "creating new dir" && rm -rf build && mkdir build)
+#!/bin/bash
+TARGET_DIR=$1
+mkdir ../"$TARGET_DIR" 2>/dev/null  #|| (echo "creating new dir" && rm -rf build && mkdir build)
 
 cmake   -G "Unix Makefiles" \
         -DCMAKE_MAKE_PROGRAM="$ANDROID_NDK_HOME/prebuilt/linux-x86_64/bin/make" \
@@ -13,9 +15,8 @@ cmake   -G "Unix Makefiles" \
         -DANDROID_STL="c++_static"\
         -DCMAKE_SYSTEM_NAME=Android \
         -DCMAKE_BUILD_TYPE="Release" \
-        -B build\
+        -B ../"$TARGET_DIR"\
         -DCMAKE_INSTALL_PREFIX=../ \
         .
 
-cmake --build build
-cmake --install build
+cmake --build ../"$TARGET_DIR"

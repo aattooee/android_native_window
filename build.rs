@@ -3,9 +3,9 @@ use std::path::Path;
 use std::process::Command;
 fn main() {
     let project_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-
+    let cxx_build_dir = "target/cxxbuild/";
     let lib_source_dir = Path::new(&project_dir).join("android_native_control_support/");
-    let lib_dir = Path::new(&project_dir).join("android_native_control_support/build/");
+    let lib_dir = Path::new(&project_dir).join(cxx_build_dir);
     let lib_path = lib_dir.join("libnative-window-control.a");
 
     // 检查目标文件是否存在，如果不存在则构建
@@ -14,6 +14,7 @@ fn main() {
         let _output = Command::new("bash")
             .current_dir(lib_source_dir)
             .arg("build.sh")
+            .arg(cxx_build_dir)
             .output()
             .expect("Failed to build cxx deps");
     }
