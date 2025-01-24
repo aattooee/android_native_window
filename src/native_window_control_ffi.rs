@@ -7,6 +7,7 @@ pub struct DisPlayInfo {
     pub width: i32,
     pub height: i32,
 }
+#[link(name = "native-window-control", kind = "static")]
 #[allow(dead_code)]
 extern "C" {
 

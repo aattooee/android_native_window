@@ -21,9 +21,8 @@ fn main() {
     }
 
     // 告诉 Cargo 在哪里查找库文件
-    // println!("cargo:rustc-link-search=native={}", lib_dir.to_str().unwrap());
+    println!("cargo:rustc-link-search=native={}", lib_dir.to_str().unwrap());
 
-    // println!("cargo:rustc-link-lib=static=native-window-control");
 
     // 如果你需要根据文件变化重新编译，可以添加此行
     println!("cargo:rerun-if-changed=build.rs");
