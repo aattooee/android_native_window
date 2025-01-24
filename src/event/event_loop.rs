@@ -163,7 +163,7 @@ impl EventLoop {
 
     pub fn run<F>(self, mut event_handler: F)
     where
-        F: FnMut(Event, std::time::Duration,&mut bool),
+        F: FnMut(Event, std::time::Duration, &mut bool),
     {
         let mut run = true;
         loop {
@@ -173,14 +173,18 @@ impl EventLoop {
             last_frame = now;
             if let Ok(pos) = self.mouse_pos.try_lock() {
                 if (*pos).is_down {
-                    event_handler(Event::MouseDown((*pos).pos.0, (*pos).pos.1), delta_time,&mut run);
+                    event_handler(
+                        Event::MouseDown((*pos).pos.0, (*pos).pos.1),
+                        delta_time,
+                        &mut run,
+                    );
                 } else {
-                    event_handler(Event::MouseUp, delta_time,&mut run);
+                    event_handler(Event::MouseUp, delta_time, &mut run);
                 }
             } else {
-                event_handler(Event::MouseUp, delta_time,&mut run);
+                event_handler(Event::MouseUp, delta_time, &mut run);
             }
-            if !run{
+            if !run {
                 break;
             }
             let sleep_time =
