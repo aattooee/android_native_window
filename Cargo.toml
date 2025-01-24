@@ -1,5 +1,5 @@
 [package]
-name = "android_native_window"
+name = "android-native-window"
 version = "0.1.0"
 edition = "2021"
 
