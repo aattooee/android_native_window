@@ -16,7 +16,7 @@ impl FingerState {
 }
 pub type MousePos = FingerState;
 pub struct EventLoop {
-    mouse_pos: std::sync::Arc<std::sync::Mutex<MousePos>>,
+    mouse_pos: std::sync::Arc<std::sync::RwLock<MousePos>>,
 }
 
 impl EventLoop {
@@ -37,10 +37,10 @@ impl EventLoop {
         let device = device.unwrap_or_else(|| panic!("can not find touch in your device"));
 
         //每秒轮询一次屏幕的朝向
-        let realtime_orientation = std::sync::Arc::new(std::sync::Mutex::new(1 as u8));
+        let realtime_orientation = std::sync::Arc::new(std::sync::RwLock::new(1 as u8));
         let realtime_orientation_clone = std::sync::Arc::clone(&realtime_orientation);
         std::thread::spawn(move || loop {
-            if let Ok(mut ori) = realtime_orientation_clone.try_lock() {
+            if let Ok(mut ori) = realtime_orientation_clone.try_write() {
                 let info = safe_get_display_info();
                 *ori = info.orientation as u8;
             }
@@ -48,7 +48,7 @@ impl EventLoop {
             std::thread::sleep(std::time::Duration::from_secs(1));
         });
         //更新触摸位置
-        let mouse_pos = std::sync::Arc::new(std::sync::Mutex::new(MousePos::new()));
+        let mouse_pos = std::sync::Arc::new(std::sync::RwLock::new(MousePos::new()));
         let mouse_pos_clone = std::sync::Arc::clone(&mouse_pos);
         std::thread::spawn(move || {
             Self::refresh_mouse_pos(realtime_orientation, mouse_pos_clone, device);
@@ -57,8 +57,8 @@ impl EventLoop {
         Self { mouse_pos }
     }
     fn refresh_mouse_pos(
-        realtime_orientation: std::sync::Arc<std::sync::Mutex<u8>>,
-        pos: std::sync::Arc<std::sync::Mutex<MousePos>>,
+        realtime_orientation: std::sync::Arc<std::sync::RwLock<u8>>,
+        pos: std::sync::Arc<std::sync::RwLock<MousePos>>,
         mut device: Device,
     ) {
         let mut finger_states: Vec<FingerState> = vec![];
@@ -111,8 +111,8 @@ impl EventLoop {
                     InputEventKind::Synchronization(syn) => match syn {
                         Synchronization::SYN_REPORT => {
                             if finger_states[least_finger_idx].is_down {
-                                if let Ok(mut pos) = pos.try_lock() {
-                                    if let Ok(ori) = realtime_orientation.try_lock() {
+                                if let Ok(mut pos) = pos.try_write() {
+                                    if let Ok(ori) = realtime_orientation.try_read() {
                                         (*pos) = Self::touch_2_screen(
                                             screen_width,
                                             screen_height,
@@ -122,8 +122,8 @@ impl EventLoop {
                                     }
                                 }
                             } else {
-                                if let Ok(mut pos) = pos.try_lock() {
-                                    (*pos).is_down = finger_states[least_finger_idx].is_down;
+                                if let Ok(mut pos) = pos.try_write() {
+                                    (*pos).is_down = false;
                                 }
                             }
                         }
@@ -170,7 +170,7 @@ impl EventLoop {
 
             let delta_time = now - last_frame;
             last_frame = now;
-            if let Ok(pos) = self.mouse_pos.try_lock() {
+            if let Ok(pos) = self.mouse_pos.try_read() {
                 mouse_cache.pos = (*pos).pos;
                 mouse_cache.is_down = (*pos).is_down;
             }
