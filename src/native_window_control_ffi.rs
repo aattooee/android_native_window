@@ -7,7 +7,7 @@ pub struct DisPlayInfo {
     pub width: i32,
     pub height: i32,
 }
-
+#[allow(dead_code)]
 extern "C" {
 
     fn greeting() -> DisPlayInfo;
@@ -20,6 +20,7 @@ extern "C" {
     ) -> *mut c_void;
     fn destroy_native_window(win: *mut c_void);
 }
+#[allow(dead_code)]
 pub fn safe_greeting() -> DisPlayInfo {
     return unsafe { greeting() };
 }
@@ -49,6 +50,7 @@ pub fn safe_create_native_window(
         })
     }
 }
+#[allow(dead_code)]
 pub fn safe_destroy_native_window(win: *mut c_void) {
     unsafe { destroy_native_window(win) }
 }

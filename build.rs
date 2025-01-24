@@ -1,29 +1,27 @@
-use reqwest::blocking::get;
 use std::env;
-use std::fs;
 use std::path::Path;
-
+use std::process::Command;
 fn main() {
-    // 设置目标文件名和下载地址
-    let lib_name = "libnative-window-control.a";
-    let url = "https://github.com/aattooee/android_native_control_support/releases/download/android14-supported/libnative-window-control.a";
-    let target_dir = env::var("OUT_DIR").unwrap(); // 获取 Cargo 输出目录
-    let target_path = Path::new(&target_dir).join(lib_name);
 
-    // 检查目标文件是否存在，如果不存在则下载
-    if !target_path.exists() {
-        // 发送 HTTP 请求下载文件
-        let mut response = get(url).expect("Failed to download file");
-        let mut out_file = fs::File::create(&target_path).expect("Failed to create file");
+    let project_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 
-        // 将下载的内容写入目标文件
-        std::io::copy(&mut response, &mut out_file).expect("Failed to write data to file");
+    let lib_source_dir = Path::new(&project_dir).join("android_native_control_support/");
+    let lib_dir = Path::new(&project_dir).join("android_native_control_support/build/");
+    let lib_path = lib_dir.join("libnative-window-control.a");
+    
 
-        println!("Downloaded library to: {:?}", target_path);
+    // 检查目标文件是否存在，如果不存在则构建
+    if !lib_path.exists() {
+        //使用脚本进行构建
+        let _output = Command::new("bash")
+        .current_dir(lib_source_dir)
+        .arg("build.sh")
+        .output()
+        .expect("Failed to build cxx deps");
     }
 
     // 告诉 Cargo 在哪里查找库文件
-    println!("cargo:rustc-link-search=native={}", target_dir);
+    println!("cargo:rustc-link-search=native={}", lib_dir.to_str().unwrap());
 
     println!("cargo:rustc-link-lib=static=native-window-control");
 
