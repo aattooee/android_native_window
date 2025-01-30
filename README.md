@@ -1,0 +1,1 @@
+Android Native Window ffi ,supported to Android15.
