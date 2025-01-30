@@ -13,7 +13,7 @@ pub struct Window {
     height: u32,
 }
 
-static mut SCALE_FACTOR:f32  = 1.0;
+static mut SCALE_FACTOR: f32 = 1.0;
 
 impl Window {
     pub fn new(title: &str) -> Self {
@@ -50,11 +50,11 @@ impl Window {
         io.update_delta_time(delta_time);
     }
     pub fn get_width(&self) -> u32 {
-       return if self.width>self.height{
-        self.width
-       }else{
-        self.height
-       }
+        return if self.width > self.height {
+            self.width
+        } else {
+            self.height
+        };
     }
     pub fn get_height(&self) -> u32 {
         return self.get_width();
@@ -65,16 +65,13 @@ impl Window {
     pub fn window_handle(&self) -> RawWindowHandle {
         return self.window_handle;
     }
-    
 }
-pub fn get_scale_factor()->f32{
-    unsafe {
-        SCALE_FACTOR
-    }
+pub fn get_scale_factor() -> f32 {
+    unsafe { SCALE_FACTOR }
 }
 pub fn attach_window(io: &mut imgui::Io, window: &Window) {
     //font scale
     //window size
-    io.font_global_scale= get_scale_factor();
+    io.font_global_scale = get_scale_factor();
     io.display_size = [window.get_width() as f32, window.get_height() as f32]
 }
