@@ -3,7 +3,7 @@ name = "android_native_window"
 version = "0.1.0"
 edition = "2021"
 
-description = "Android Native Window ffi ,supported to Android14."
+description = "Android Native Window ffi ,supported to Android15."
 license = "MIT"
 
 authors = ["aattooee <aattooee@github.com>"]
