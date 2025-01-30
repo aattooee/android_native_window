@@ -12,6 +12,9 @@ pub struct Window {
     width: u32,
     height: u32,
 }
+
+static mut SCALE_FACTOR:f32  = 1.0;
+
 impl Window {
     pub fn new(title: &str) -> Self {
         let display_handle = RawDisplayHandle::Android(AndroidDisplayHandle::new());
@@ -23,10 +26,9 @@ impl Window {
         let res = if width > height { width } else { height };
         unsafe {
             let ptr = core::ptr::NonNull::new_unchecked(safe_create_native_window(
-                title, res as i32, res as i32, true,
+                title, res, res, false,
             ));
             let window_handle = AndroidNdkWindowHandle::new(ptr.cast());
-
             return Self {
                 window_handle: RawWindowHandle::AndroidNdk(window_handle),
                 display_handle,
@@ -48,11 +50,11 @@ impl Window {
         io.update_delta_time(delta_time);
     }
     pub fn get_width(&self) -> u32 {
-        return if self.width > self.height {
-            self.width
-        } else {
-            self.height
-        };
+       return if self.width>self.height{
+        self.width
+       }else{
+        self.height
+       }
     }
     pub fn get_height(&self) -> u32 {
         return self.get_width();
@@ -63,9 +65,16 @@ impl Window {
     pub fn window_handle(&self) -> RawWindowHandle {
         return self.window_handle;
     }
+    
+}
+pub fn get_scale_factor()->f32{
+    unsafe {
+        SCALE_FACTOR
+    }
 }
 pub fn attach_window(io: &mut imgui::Io, window: &Window) {
     //font scale
     //window size
+    io.font_global_scale= get_scale_factor();
     io.display_size = [window.get_width() as f32, window.get_height() as f32]
 }

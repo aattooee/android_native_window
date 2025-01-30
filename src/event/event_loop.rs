@@ -85,6 +85,11 @@ impl EventLoop {
         }
         let scale_x = phy_win_x / screen_width;
         let scale_y = phy_win_y / screen_height;
+
+        unsafe {
+            crate::SCALE_FACTOR = scale_x/10.0
+        }
+
         loop {
             // 读取输入事件
             for ev in device.fetch_events().expect("fetch_events failed!") {
@@ -183,7 +188,6 @@ impl EventLoop {
             } else {
                 event_handler(Event::MouseUp, delta_time, &mut run);
             }
-
             if !run {
                 break;
             }
