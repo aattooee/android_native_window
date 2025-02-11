@@ -29,13 +29,13 @@ impl Window {
                 title, res, res, false,
             ));
             let window_handle = AndroidNdkWindowHandle::new(ptr.cast());
-            return Self {
+            Self {
                 window_handle: RawWindowHandle::AndroidNdk(window_handle),
                 display_handle,
                 width: width.try_into().unwrap(),
                 height: height.try_into().unwrap(),
-            };
-        };
+            }
+        }
     }
     pub fn handle_event(io: &mut imgui::Io, event: Event, delta_time: std::time::Duration) {
         match event {
@@ -50,20 +50,20 @@ impl Window {
         io.update_delta_time(delta_time);
     }
     pub fn get_width(&self) -> u32 {
-        return if self.width > self.height {
+        if self.width > self.height {
             self.width
         } else {
             self.height
-        };
+        }
     }
     pub fn get_height(&self) -> u32 {
-        return self.get_width();
+        self.get_width()
     }
     pub fn display_handle(&self) -> RawDisplayHandle {
-        return self.display_handle;
+        self.display_handle
     }
     pub fn window_handle(&self) -> RawWindowHandle {
-        return self.window_handle;
+        self.window_handle
     }
 }
 pub fn get_scale_factor() -> f32 {

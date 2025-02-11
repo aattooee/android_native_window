@@ -23,7 +23,7 @@ extern "C" {
 }
 #[allow(dead_code)]
 pub fn safe_greeting() -> DisPlayInfo {
-    return unsafe { greeting() };
+    unsafe { greeting() }
 }
 pub fn safe_get_display_info() -> DisPlayInfo {
     unsafe {

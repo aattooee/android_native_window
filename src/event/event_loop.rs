@@ -6,8 +6,9 @@ pub struct FingerState {
     pub is_down: bool,
     pub pos: (f32, f32),
 }
-impl FingerState {
-    pub fn new() -> Self {
+
+impl Default for FingerState {
+    fn default() -> Self {
         Self {
             is_down: false,
             pos: (0.0, 0.0),
@@ -48,7 +49,7 @@ impl EventLoop {
             std::thread::sleep(std::time::Duration::from_secs(1));
         });
         //更新触摸位置
-        let mouse_pos = std::sync::Arc::new(std::sync::RwLock::new(MousePos::new()));
+        let mouse_pos = std::sync::Arc::new(std::sync::RwLock::new(MousePos::default()));
         let mouse_pos_clone = std::sync::Arc::clone(&mouse_pos);
         std::thread::spawn(move || {
             Self::refresh_mouse_pos(realtime_orientation, mouse_pos_clone, device);
@@ -94,14 +95,10 @@ impl EventLoop {
                 match ev.kind() {
                     InputEventKind::AbsAxis(axis) => match axis {
                         AbsoluteAxisType::ABS_MT_SLOT => {
-                            least_finger_idx = (ev.code() as usize).min(0).max(9);
+                            least_finger_idx = ev.code() as usize;
                         }
                         AbsoluteAxisType::ABS_MT_TRACKING_ID => {
-                            if ev.value() == -1 {
-                                finger_states[least_finger_idx].is_down = false;
-                            } else {
-                                finger_states[least_finger_idx].is_down = true;
-                            }
+                            finger_states[least_finger_idx].is_down = ev.value() != -1;
                         }
                         AbsoluteAxisType::ABS_MT_POSITION_X => {
                             finger_states[least_finger_idx].pos.0 = ev.value() as f32 / scale_x;
@@ -111,26 +108,21 @@ impl EventLoop {
                         }
                         _ => {}
                     },
-                    InputEventKind::Synchronization(syn) => match syn {
-                        Synchronization::SYN_REPORT => {
-                            if finger_states[least_finger_idx].is_down {
-                                if let Ok(mut pos) = pos.try_write() {
-                                    if let Ok(ori) = realtime_orientation.try_read() {
-                                        (*pos) = Self::touch_2_screen(
-                                            screen_width,
-                                            screen_height,
-                                            *ori,
-                                            finger_states[least_finger_idx].clone(),
-                                        );
-                                    }
-                                }
-                            } else {
-                                if let Ok(mut pos) = pos.try_write() {
-                                    (*pos).is_down = false;
+                    InputEventKind::Synchronization(syn) => if syn == Synchronization::SYN_REPORT {
+                        if finger_states[least_finger_idx].is_down {
+                            if let Ok(mut pos) = pos.try_write() {
+                                if let Ok(ori) = realtime_orientation.try_read() {
+                                    (*pos) = Self::touch_2_screen(
+                                        screen_width,
+                                        screen_height,
+                                        *ori,
+                                        finger_states[least_finger_idx].clone(),
+                                    );
                                 }
                             }
+                        } else if let Ok(mut pos) = pos.try_write() {
+                            pos.is_down = false;
                         }
-                        _ => {}
                     },
                     _ => {}
                 }
@@ -145,8 +137,8 @@ impl EventLoop {
         phy_mouse_pos: MousePos,
     ) -> MousePos {
         let mut phy_mouse_pos = phy_mouse_pos;
-        let x = phy_mouse_pos.pos.0.clone();
-        let y = phy_mouse_pos.pos.1.clone();
+        let x = phy_mouse_pos.pos.0;
+        let y = phy_mouse_pos.pos.1;
         match realtime_orientation {
             1 => {
                 phy_mouse_pos.pos.0 = y;
@@ -167,15 +159,15 @@ impl EventLoop {
     {
         let mut run = true;
         let mut last_frame = std::time::Instant::now();
-        let mut mouse_cache = MousePos::new();
+        let mut mouse_cache = MousePos::default();
         loop {
             let now = std::time::Instant::now();
 
             let delta_time = now - last_frame;
             last_frame = now;
             if let Ok(pos) = self.mouse_pos.try_read() {
-                mouse_cache.pos = (*pos).pos;
-                mouse_cache.is_down = (*pos).is_down;
+                mouse_cache.pos = pos.pos;
+                mouse_cache.is_down = pos.is_down;
             }
             if mouse_cache.is_down {
                 event_handler(
@@ -194,9 +186,8 @@ impl EventLoop {
 }
 
 fn is_touch(device: &Device) -> bool {
-    return device.supported_absolute_axes().map_or(false, |axes| {
-        axes.contains(AbsoluteAxisType::ABS_X)
-            && axes.contains(AbsoluteAxisType::ABS_MT_SLOT)
-            && axes.contains(AbsoluteAxisType::ABS_Y)
-    });
+    device.supported_absolute_axes().is_some_and(|axes| {
+        axes.contains(AbsoluteAxisType::ABS_MT_POSITION_X)
+            && axes.contains(AbsoluteAxisType::ABS_MT_POSITION_Y)
+    })
 }
