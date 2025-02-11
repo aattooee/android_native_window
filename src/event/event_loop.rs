@@ -1,6 +1,6 @@
 use super::Event;
 use crate::native_window_control_ffi::{self, safe_get_display_info};
-use evdev::{AbsoluteAxisType, Device, InputEventKind, Synchronization};
+use evdev::{AbsoluteAxisCode, Device, EventSummary, SynchronizationCode};
 #[derive(Debug, Clone)]
 pub struct FingerState {
     pub is_down: bool,
@@ -72,10 +72,25 @@ impl EventLoop {
         let mut least_finger_idx: usize = 0;
 
         //
-        let infos = device.get_abs_state().expect("can not get abs info");
-        let phy_win_x = infos[0].maximum as f32;
-        let phy_win_y = infos[1].maximum as f32;
+        let mut phy_win_x:f32 = 0.0;
+        let mut phy_win_y:f32 = 0.0;
         //
+        for (code,absinfo) in device.get_absinfo().expect("can not get abs info of the touch"){
+            match code {
+                AbsoluteAxisCode::ABS_MT_POSITION_X=>{
+                    phy_win_x = absinfo.maximum() as f32;
+                },
+                AbsoluteAxisCode::ABS_MT_POSITION_Y=>{
+                    phy_win_y = absinfo.maximum() as f32;
+                }
+                _=>()
+                
+            }
+        }  
+        if phy_win_y == 0.0 || phy_win_x == 0.0{
+            panic!("phy_win_x :{},phy_win_x:{},something went wrong!",phy_win_x,phy_win_y);
+        } 
+
         let native_window_control_ffi::DisPlayInfo { width, height, .. } = safe_get_display_info();
         let mut screen_width: f32 = width as f32;
         let mut screen_height: f32 = height as f32;
@@ -92,23 +107,20 @@ impl EventLoop {
         loop {
             // 读取输入事件
             for ev in device.fetch_events().expect("fetch_events failed!") {
-                match ev.kind() {
-                    InputEventKind::AbsAxis(axis) => match axis {
-                        AbsoluteAxisType::ABS_MT_SLOT => {
-                            least_finger_idx = ev.code() as usize;
-                        }
-                        AbsoluteAxisType::ABS_MT_TRACKING_ID => {
-                            finger_states[least_finger_idx].is_down = ev.value() != -1;
-                        }
-                        AbsoluteAxisType::ABS_MT_POSITION_X => {
-                            finger_states[least_finger_idx].pos.0 = ev.value() as f32 / scale_x;
-                        }
-                        AbsoluteAxisType::ABS_MT_POSITION_Y => {
-                            finger_states[least_finger_idx].pos.1 = ev.value() as f32 / scale_y;
-                        }
-                        _ => {}
+                match ev.destructure() {
+                    EventSummary::AbsoluteAxis(_, AbsoluteAxisCode::ABS_MT_SLOT,value )=>{
+                        least_finger_idx = value as usize;
                     },
-                    InputEventKind::Synchronization(syn) => if syn == Synchronization::SYN_REPORT {
+                    EventSummary::AbsoluteAxis(_, AbsoluteAxisCode::ABS_MT_TRACKING_ID,value )=>{
+                        finger_states[least_finger_idx].is_down = value != -1;
+                    },
+                    EventSummary::AbsoluteAxis(_, AbsoluteAxisCode::ABS_MT_POSITION_X,value )=>{
+                        finger_states[least_finger_idx].pos.0 = value as f32 / scale_x;
+                    },
+                    EventSummary::AbsoluteAxis(_, AbsoluteAxisCode::ABS_MT_POSITION_Y,value )=>{
+                        finger_states[least_finger_idx].pos.1 = value as f32 / scale_y;
+                    },
+                    EventSummary::Synchronization(_, SynchronizationCode::SYN_REPORT,_ )=>{
                         if finger_states[least_finger_idx].is_down {
                             if let Ok(mut pos) = pos.try_write() {
                                 if let Ok(ori) = realtime_orientation.try_read() {
@@ -187,7 +199,7 @@ impl EventLoop {
 
 fn is_touch(device: &Device) -> bool {
     device.supported_absolute_axes().is_some_and(|axes| {
-        axes.contains(AbsoluteAxisType::ABS_MT_POSITION_X)
-            && axes.contains(AbsoluteAxisType::ABS_MT_POSITION_Y)
+        axes.contains(AbsoluteAxisCode::ABS_MT_POSITION_X)
+            && axes.contains(AbsoluteAxisCode::ABS_MT_POSITION_Y)
     })
 }
