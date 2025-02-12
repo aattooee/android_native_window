@@ -1,7 +1,7 @@
 pub mod event;
 mod native_window_control_ffi;
 
-use event::{event_loop::{self, EventLoop}, Event};
+use event::{event_loop::EventLoop, Event};
 use native_window_control_ffi::{safe_create_native_window, safe_get_display_info, DisPlayInfo};
 use raw_window_handle::{
     AndroidDisplayHandle, AndroidNdkWindowHandle, RawDisplayHandle, RawWindowHandle,
@@ -16,7 +16,7 @@ pub struct Window {
 static mut SCALE_FACTOR: f32 = 1.0;
 
 impl Window {
-    pub fn new(title: &str,event_loop:&mut EventLoop) -> Self {
+    pub fn new(title: &str, event_loop: &mut EventLoop) -> Self {
         let display_handle = RawDisplayHandle::Android(AndroidDisplayHandle::new());
         let DisPlayInfo {
             orientation: _,
@@ -28,11 +28,11 @@ impl Window {
             let ptr = core::ptr::NonNull::new_unchecked(safe_create_native_window(
                 title, res, res, false,
             ));
-            
+
             let window_handle = AndroidNdkWindowHandle::new(ptr.cast());
 
             event_loop.set_window_target(ptr.as_ptr());
-            
+
             Self {
                 window_handle: RawWindowHandle::AndroidNdk(window_handle),
                 display_handle,

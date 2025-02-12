@@ -1,7 +1,4 @@
-use std::ptr::NonNull;
-
 use super::Event;
-use crate::Window;
 use crate::native_window_control_ffi::{self, safe_get_display_info};
 use evdev::{AbsoluteAxisCode, Device, EventSummary, SynchronizationCode};
 #[derive(Debug, Clone)]
@@ -22,9 +19,8 @@ pub type MousePos = FingerState;
 
 pub struct EventLoop {
     mouse_pos: std::sync::Arc<std::sync::RwLock<MousePos>>,
-    window_target:*mut std::ffi::c_void
+    window_target: *mut std::ffi::c_void,
 }
-
 
 impl EventLoop {
     fn new() -> Self {
@@ -44,7 +40,7 @@ impl EventLoop {
         let device = device.unwrap_or_else(|| panic!("can not find touch in your device"));
 
         //每秒轮询一次屏幕的朝向
-        let realtime_orientation = std::sync::Arc::new(std::sync::RwLock::new(1 as u8));
+        let realtime_orientation = std::sync::Arc::new(std::sync::RwLock::new(1_u8));
         let realtime_orientation_clone = std::sync::Arc::clone(&realtime_orientation);
         std::thread::spawn(move || loop {
             if let Ok(mut ori) = realtime_orientation_clone.try_write() {
@@ -61,7 +57,10 @@ impl EventLoop {
             Self::refresh_mouse_pos(realtime_orientation, mouse_pos_clone, device);
         });
 
-        Self { mouse_pos ,window_target:std::ptr::null_mut()}
+        Self {
+            mouse_pos,
+            window_target: std::ptr::null_mut(),
+        }
     }
     fn refresh_mouse_pos(
         realtime_orientation: std::sync::Arc<std::sync::RwLock<u8>>,
@@ -78,24 +77,29 @@ impl EventLoop {
         let mut least_finger_idx: usize = 0;
 
         //
-        let mut phy_win_x:f32 = 0.0;
-        let mut phy_win_y:f32 = 0.0;
+        let mut phy_win_x: f32 = 0.0;
+        let mut phy_win_y: f32 = 0.0;
         //
-        for (code,absinfo) in device.get_absinfo().expect("can not get abs info of the touch"){
+        for (code, absinfo) in device
+            .get_absinfo()
+            .expect("can not get abs info of the touch")
+        {
             match code {
-                AbsoluteAxisCode::ABS_MT_POSITION_X=>{
+                AbsoluteAxisCode::ABS_MT_POSITION_X => {
                     phy_win_x = absinfo.maximum() as f32;
-                },
-                AbsoluteAxisCode::ABS_MT_POSITION_Y=>{
+                }
+                AbsoluteAxisCode::ABS_MT_POSITION_Y => {
                     phy_win_y = absinfo.maximum() as f32;
                 }
-                _=>()
-                
+                _ => (),
             }
-        }  
-        if phy_win_y == 0.0 || phy_win_x == 0.0{
-            panic!("phy_win_x :{},phy_win_x:{},something went wrong!",phy_win_x,phy_win_y);
-        } 
+        }
+        if phy_win_y == 0.0 || phy_win_x == 0.0 {
+            panic!(
+                "phy_win_x :{},phy_win_x:{},something went wrong!",
+                phy_win_x, phy_win_y
+            );
+        }
 
         let native_window_control_ffi::DisPlayInfo { width, height, .. } = safe_get_display_info();
         let mut screen_width: f32 = width as f32;
@@ -114,19 +118,19 @@ impl EventLoop {
             // 读取输入事件
             for ev in device.fetch_events().expect("fetch_events failed!") {
                 match ev.destructure() {
-                    EventSummary::AbsoluteAxis(_, AbsoluteAxisCode::ABS_MT_SLOT,value )=>{
+                    EventSummary::AbsoluteAxis(_, AbsoluteAxisCode::ABS_MT_SLOT, value) => {
                         least_finger_idx = value as usize;
-                    },
-                    EventSummary::AbsoluteAxis(_, AbsoluteAxisCode::ABS_MT_TRACKING_ID,value )=>{
+                    }
+                    EventSummary::AbsoluteAxis(_, AbsoluteAxisCode::ABS_MT_TRACKING_ID, value) => {
                         finger_states[least_finger_idx].is_down = value != -1;
-                    },
-                    EventSummary::AbsoluteAxis(_, AbsoluteAxisCode::ABS_MT_POSITION_X,value )=>{
+                    }
+                    EventSummary::AbsoluteAxis(_, AbsoluteAxisCode::ABS_MT_POSITION_X, value) => {
                         finger_states[least_finger_idx].pos.0 = value as f32 / scale_x;
-                    },
-                    EventSummary::AbsoluteAxis(_, AbsoluteAxisCode::ABS_MT_POSITION_Y,value )=>{
+                    }
+                    EventSummary::AbsoluteAxis(_, AbsoluteAxisCode::ABS_MT_POSITION_Y, value) => {
                         finger_states[least_finger_idx].pos.1 = value as f32 / scale_y;
-                    },
-                    EventSummary::Synchronization(_, SynchronizationCode::SYN_REPORT,_ )=>{
+                    }
+                    EventSummary::Synchronization(_, SynchronizationCode::SYN_REPORT, _) => {
                         if finger_states[least_finger_idx].is_down {
                             if let Ok(mut pos) = pos.try_write() {
                                 if let Ok(ori) = realtime_orientation.try_read() {
@@ -141,7 +145,7 @@ impl EventLoop {
                         } else if let Ok(mut pos) = pos.try_write() {
                             pos.is_down = false;
                         }
-                    },
+                    }
                     _ => {}
                 }
             }
@@ -170,7 +174,7 @@ impl EventLoop {
         }
         phy_mouse_pos
     }
-    fn exit(&self){
+    fn exit(&self) {
         native_window_control_ffi::safe_destroy_native_window(self.window_target)
     }
     pub fn run<F>(&self, mut event_handler: F)
@@ -198,17 +202,17 @@ impl EventLoop {
             } else {
                 event_handler(Event::MouseUp, delta_time, &mut run);
             }
-            if !run { 
+            if !run {
                 self.exit();
                 break;
             }
         }
     }
-    pub(crate) fn set_window_target(&mut self,target:*mut std::ffi::c_void){
+    pub(crate) fn set_window_target(&mut self, target: *mut std::ffi::c_void) {
         self.window_target = target
     }
 }
-impl Default for EventLoop{
+impl Default for EventLoop {
     fn default() -> Self {
         Self::new()
     }
