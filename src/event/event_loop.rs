@@ -1,4 +1,7 @@
+use std::ptr::NonNull;
+
 use super::Event;
+use crate::Window;
 use crate::native_window_control_ffi::{self, safe_get_display_info};
 use evdev::{AbsoluteAxisCode, Device, EventSummary, SynchronizationCode};
 #[derive(Debug, Clone)]
@@ -16,12 +19,15 @@ impl Default for FingerState {
     }
 }
 pub type MousePos = FingerState;
+
 pub struct EventLoop {
     mouse_pos: std::sync::Arc<std::sync::RwLock<MousePos>>,
+    window_target:*mut std::ffi::c_void
 }
 
+
 impl EventLoop {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut i = 0;
         let device: Option<Device> = loop {
             if let Ok(dev) = Device::open(format!("/dev/input/event{i}")) {
@@ -55,7 +61,7 @@ impl EventLoop {
             Self::refresh_mouse_pos(realtime_orientation, mouse_pos_clone, device);
         });
 
-        Self { mouse_pos }
+        Self { mouse_pos ,window_target:std::ptr::null_mut()}
     }
     fn refresh_mouse_pos(
         realtime_orientation: std::sync::Arc<std::sync::RwLock<u8>>,
@@ -164,8 +170,10 @@ impl EventLoop {
         }
         phy_mouse_pos
     }
-
-    pub fn run<F>(self, mut event_handler: F)
+    fn exit(&self){
+        native_window_control_ffi::safe_destroy_native_window(self.window_target)
+    }
+    pub fn run<F>(&self, mut event_handler: F)
     where
         F: FnMut(Event, std::time::Duration, &mut bool),
     {
@@ -190,13 +198,21 @@ impl EventLoop {
             } else {
                 event_handler(Event::MouseUp, delta_time, &mut run);
             }
-            if !run {
+            if !run { 
+                self.exit();
                 break;
             }
         }
     }
+    pub(crate) fn set_window_target(&mut self,target:*mut std::ffi::c_void){
+        self.window_target = target
+    }
 }
-
+impl Default for EventLoop{
+    fn default() -> Self {
+        Self::new()
+    }
+}
 fn is_touch(device: &Device) -> bool {
     device.supported_absolute_axes().is_some_and(|axes| {
         axes.contains(AbsoluteAxisCode::ABS_MT_POSITION_X)
